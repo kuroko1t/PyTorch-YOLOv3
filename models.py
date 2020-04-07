@@ -71,6 +71,7 @@ def create_modules(module_defs):
             anchors = [int(x) for x in module_def["anchors"].split(",")]
             anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
             anchors = [anchors[i] for i in anchor_idxs]
+
             num_classes = int(module_def["classes"])
             img_size = int(hyperparams["height"])
             # Define detection layer
@@ -189,6 +190,8 @@ class YOLOLayer(nn.Module):
             )
 
             # Loss : Mask outputs to ignore non-existing objects (except with conf. loss)
+            obj_mask = obj_mask.bool()
+            noobj_mask = noobj_mask.bool()
             loss_x = self.mse_loss(x[obj_mask], tx[obj_mask])
             loss_y = self.mse_loss(y[obj_mask], ty[obj_mask])
             loss_w = self.mse_loss(w[obj_mask], tw[obj_mask])
