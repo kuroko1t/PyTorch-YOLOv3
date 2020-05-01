@@ -239,7 +239,10 @@ class Darknet(nn.Module):
 
     def __init__(self, config_path, img_size=416):
         super(Darknet, self).__init__()
+        self.num_classes = num_classes
+        cfg_path = os.path.dirname(os.path.abspath(__file__)) + "/yolov3.cfg"
         self.module_defs = parse_model_config(config_path)
+
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.yolo_layers = [layer[0] for layer in self.module_list if hasattr(layer[0], "metrics")]
         self.img_size = img_size
