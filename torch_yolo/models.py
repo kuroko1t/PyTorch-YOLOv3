@@ -8,6 +8,7 @@ import numpy as np
 
 from .utils.parse_config import *
 from .utils.utils import build_targets, to_cpu, non_max_suppression
+from .utils import yolov3_cfg
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -237,17 +238,22 @@ class YOLOLayer(nn.Module):
 class Darknet(nn.Module):
     """YOLOv3 object detection model"""
 
-    def __init__(self, config_path, img_size=416):
+    def __init__(self, num_classes, img_size=416):
         super(Darknet, self).__init__()
         self.num_classes = num_classes
-        cfg_path = os.path.dirname(os.path.abspath(__file__)) + "/yolov3.cfg"
-        self.module_defs = parse_model_config(config_path)
-
+        yolo_model = self.create_custom_cfg(yolov3_cfg.yolo_model)
+        self.module_defs = parse_model_config(yolo_model)
+        
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.yolo_layers = [layer[0] for layer in self.module_list if hasattr(layer[0], "metrics")]
         self.img_size = img_size
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen, 0], dtype=np.int32)
+
+    def create_custom_cfg(self, yolo_model):
+        yolo_model = yolo_model.replace("NUM_CLASSES", str(self.num_classes))
+        yolo_model = yolo_model.replace("FILTERS", str((self.num_classes + 5) * 3))
+        return yolo_model
 
     def forward(self, x, targets=None):
         img_dim = x.shape[2]
