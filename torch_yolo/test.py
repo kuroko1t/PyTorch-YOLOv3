@@ -1,9 +1,9 @@
 from __future__ import division
 
-from models import *
-from utils.utils import *
-from utils.datasets import *
-from utils.parse_config import *
+from .models import *
+from .utils.utils import *
+from .utils.datasets import *
+from .utils.parse_config import *
 
 import os
 import sys
@@ -54,3 +54,5 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
     precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
 
     return precision, recall, AP, f1, ap_class
+
+
