@@ -38,7 +38,6 @@ if __name__ == "__main__":
     parser.add_argument("--compute_map", default=False, help="if True computes mAP every tenth batch")
     parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
     opt = parser.parse_args()
-    print(opt)
 
     #logger = Logger("logs")
 
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     class_names = load_classes(data_config["names"])
 
     # Initiate model
-    model = Darknet(num_classes=opt.num_classes).to(device)
+    model = Darknet(num_classes=opt.num_classes, version="v3").to(device)
     model.apply(weights_init_normal)
 
     # If specified we start from checkpoint

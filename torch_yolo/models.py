@@ -8,7 +8,7 @@ import numpy as np
 
 from .utils.parse_config import *
 from .utils.utils import build_targets, to_cpu, non_max_suppression
-from .utils import yolov3_cfg
+from .utils import yolov3_cfg, yolov4_cfg
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -44,6 +44,13 @@ def create_modules(module_defs):
                 modules.add_module(f"batch_norm_{module_i}", nn.BatchNorm2d(filters, momentum=0.9, eps=1e-5))
             if module_def["activation"] == "leaky":
                 modules.add_module(f"leaky_{module_i}", nn.LeakyReLU(0.1))
+            elif module_def["activation"] == "mish":
+                modules.add_module(f"mish_{module_i}", Mish())
+            elif module_def["activation"] == "linear":
+                modules.add_module(f"linear_{module_i}", nn.Identity())
+            else:
+                raise Exception(f"FAIL parse config:[{module_def['activation']}]")
+ 
 
         elif module_def["type"] == "maxpool":
             kernel_size = int(module_def["size"])
@@ -78,12 +85,27 @@ def create_modules(module_defs):
             # Define detection layer
             yolo_layer = YOLOLayer(anchors, num_classes, img_size)
             modules.add_module(f"yolo_{module_i}", yolo_layer)
+        else:
+            raise Exception(f"FAIL parse config:[{module_def['type']}]")
         # Register module list and number of output filters
         module_list.append(modules)
         output_filters.append(filters)
 
     return hyperparams, module_list
 
+class Mish(nn.Module):
+    """
+    ref:https://arxiv.org/ftp/arxiv/papers/1908/1908.08681.pdf
+
+    .. math::
+    x * tanh(ln(1+e^x))
+    """
+
+    def __init__(self):
+        super(Mish, self).__init__()
+
+    def forward(self, x):
+        return x * torch.tanh(F.softplus(x))
 
 class Upsample(nn.Module):
     """ nn.Upsample is deprecated """
@@ -238,10 +260,15 @@ class YOLOLayer(nn.Module):
 class Darknet(nn.Module):
     """YOLOv3 object detection model"""
 
-    def __init__(self, num_classes, img_size=416):
+    def __init__(self, num_classes, img_size=416, version="v3"):
         super(Darknet, self).__init__()
         self.num_classes = num_classes
-        yolo_model = self.create_custom_cfg(yolov3_cfg.yolo_model)
+        if version == "v3":
+            yolo_model = self.create_custom_cfg(yolov3_cfg.yolo_model)
+        elif version == "v4":
+            yolo_model = self.create_custom_cfg(yolov4_cfg.yolo_model)
+        else:
+            raise Exception(f"no version {version}")
         self.module_defs = parse_model_config(yolo_model)
         
         self.hyperparams, self.module_list = create_modules(self.module_defs)
