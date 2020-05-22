@@ -54,7 +54,8 @@ if __name__ == "__main__":
     class_names = load_classes(data_config["names"])
 
     # Initiate model
-    model = Darknet(num_classes=opt.num_classes).to(device)
+    model = Darknet(num_classes=opt.num_classes, version="v3").to(device)
+    print(model)
     model.apply(weights_init_normal)
 
     # If specified we start from checkpoint
