@@ -1,11 +1,9 @@
-# PyTorch-YOLOv3
+# PyTorch-YOLOv3 and YOLOv4
 A minimal PyTorch implementation of YOLOv3, with support for training, inference and evaluation.
 
 ## Installation
 ##### Clone and install requirements
-    $ git clone https://github.com/eriklindernoren/PyTorch-YOLOv3
-    $ cd PyTorch-YOLOv3/
-    $ sudo pip3 install -r requirements.txt
+    $ python3 setup.py install
 
 ##### Download pretrained weights
     $ cd weights/
