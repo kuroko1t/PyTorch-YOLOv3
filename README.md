@@ -1,4 +1,4 @@
-# PyTorch-YOLOv3 and YOLOv4
+# YOLOv3 and YOLOv4
 A minimal PyTorch implementation of YOLOv3, with support for training, inference and evaluation.
 
 ## Installation
