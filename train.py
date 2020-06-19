@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
     parser.add_argument("--batch_size", type=int, default=8, help="size of each image batch")
+    parser.add_argument("--yolo_version", type=str, default="v3", help="YOLO version (v3 or v4)")
     parser.add_argument("--gradient_accumulations", type=int, default=2, help="number of gradient accums before step")
     parser.add_argument("--num_classes", type=int, default=81, help="path to model definition file")
     parser.add_argument("--data_config", type=str, default="config/coco.data", help="path to data config file")
@@ -46,13 +47,16 @@ if __name__ == "__main__":
     os.makedirs("checkpoints", exist_ok=True)
 
     # Get data configuration
-    data_config = parse_data_config(opt.data_config)
-    train_path = data_config["train"]
-    valid_path = data_config["valid"]
-    class_names = load_classes(data_config["names"])
+    #data_config = parse_data_config(opt.data_config)
+    train_img_path = "data/coco/images/train2014/"
+    valid_img_path = "data/coco/images/val2014/"
+    #print(train_path)
+    #print(valid_path)
+    class_names_path = "./data/coco.names"  
+    class_names = load_classes(class_names_path)
 
     # Initiate model
-    model = Darknet(num_classes=opt.num_classes, version="v3").to(device)
+    model = Darknet(num_classes=opt.num_classes, version=opt.yolo_version).to(device)
     model.apply(weights_init_normal)
 
     # If specified we start from checkpoint
@@ -63,7 +67,8 @@ if __name__ == "__main__":
             model.load_darknet_weights(opt.pretrained_weights)
 
     # Get dataloader
-    dataset = ListDataset(train_path, augment=True, multiscale=opt.multiscale_training)
+    dataset = ListDataset(train_img_path,
+                          augment=True, multiscale=opt.multiscale_training)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
@@ -126,12 +131,12 @@ if __name__ == "__main__":
                 metric_table += [[metric, *row_metrics]]
 
                 # Tensorboard logging
-                tensorboard_log = []
-                for j, yolo in enumerate(model.yolo_layers):
-                    for name, metric in yolo.metrics.items():
-                        if name != "grid_size":
-                            tensorboard_log += [(f"{name}_{j+1}", metric)]
-                tensorboard_log += [("loss", loss.item())]
+                #tensorboard_log = []
+                #for j, yolo in enumerate(model.yolo_layers):
+                #    for name, metric in yolo.metrics.items():
+                #        if name != "grid_size":
+                #            tensorboard_log += [(f"{name}_{j+1}", metric)]
+                #tensorboard_log += [("loss", loss.item())]
                 #logger.list_of_scalars_summary(tensorboard_log, batches_done)
 
             log_str += AsciiTable(metric_table).table
@@ -151,7 +156,7 @@ if __name__ == "__main__":
             # Evaluate the model on the validation set
             precision, recall, AP, f1, ap_class = evaluate(
                 model,
-                path=valid_path,
+                img_path=valid_img_path,
                 iou_thres=0.5,
                 conf_thres=0.5,
                 nms_thres=0.5,

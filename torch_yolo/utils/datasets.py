@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from .augmentations import horisontal_flip
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
-
+import glob
 
 def pad_to_square(img, pad_value):
     c, h, w = img.shape
@@ -58,14 +58,17 @@ class ImageFolder(Dataset):
 
 
 class ListDataset(Dataset):
-    def __init__(self, list_path, img_size=416, augment=True, multiscale=True, normalized_labels=True):
-        with open(list_path, "r") as file:
-            self.img_files = file.readlines()
+    def __init__(self, img_path, img_size=416, augment=True, multiscale=True, normalized_labels=True):
+        #with open(list_path, "r") as file:
+        #    self.img_files = file.readlines()
+        self.img_files = glob.glob(img_path+"/*.jpg")
+        self.img_files += glob.glob(img_path+"/*.png")
+        self.label_files = [img.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt") for img in self.img_files]
 
-        self.label_files = [
-            path.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
-            for path in self.img_files
-        ]
+        #self.label_files = [
+        #    path.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
+        #    for path in self.img_files
+        #]
         self.img_size = img_size
         self.max_objects = 100
         self.augment = augment
@@ -82,7 +85,6 @@ class ListDataset(Dataset):
         # ---------
 
         img_path = self.img_files[index % len(self.img_files)].rstrip()
-
         # Extract image as PyTorch tensor
         img = transforms.ToTensor()(Image.open(img_path).convert('RGB'))
 
@@ -102,7 +104,6 @@ class ListDataset(Dataset):
         # ---------
 
         label_path = self.label_files[index % len(self.img_files)].rstrip()
-
         targets = None
         if os.path.exists(label_path):
             boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
@@ -124,11 +125,11 @@ class ListDataset(Dataset):
 
             targets = torch.zeros((len(boxes), 6))
             targets[:, 1:] = boxes
-
-        # Apply augmentations
-        if self.augment:
-            if np.random.random() < 0.5:
-                img, targets = horisontal_flip(img, targets)
+            
+            # Apply augmentations
+            if self.augment:
+                if np.random.random() < 0.5:
+                    img, targets = horisontal_flip(img, targets)
 
         return img_path, img, targets
 

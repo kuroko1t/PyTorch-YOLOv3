@@ -4,6 +4,6 @@ import os
 setup(
     name="torch_yolo",
     packages=find_packages(),
-    install_requires=["numpy", "torch", "matplotlib", "terminaltables", "pillow", "tqdm"],
+    install_requires=["numpy", "torch", "torchvision", "matplotlib", "terminaltables", "pillow", "tqdm"],
     version="0.1"
 )
