@@ -48,11 +48,11 @@ if __name__ == "__main__":
 
     # Get data configuration
     #data_config = parse_data_config(opt.data_config)
-    train_img_path = "data/coco/images/train2014/"
-    valid_img_path = "data/coco/images/val2014/"
+    train_img_path = "/dgx/shared/Data/COCO/images/train2017/"
+    valid_img_path = "/dgx/shared/Data/COCO/images/val2017/"
     #print(train_path)
     #print(valid_path)
-    class_names_path = "./data/coco.names"  
+    class_names_path = "./data/coco.names"
     class_names = load_classes(class_names_path)
 
     # Initiate model
@@ -67,8 +67,7 @@ if __name__ == "__main__":
             model.load_darknet_weights(opt.pretrained_weights)
 
     # Get dataloader
-    dataset = ListDataset(train_img_path,
-                          augment=True, multiscale=opt.multiscale_training)
+    dataset = CocoDetection(train_img_path, "/dgx/shared/Data/COCO/annotations/instances_train2017.json")
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
@@ -100,7 +99,7 @@ if __name__ == "__main__":
     for epoch in range(opt.epochs):
         model.train()
         start_time = time.time()
-        for batch_i, (_, imgs, targets) in enumerate(dataloader):
+        for batch_i, (imgs, targets) in enumerate(dataloader):
             batches_done = len(dataloader) * epoch + batch_i
 
             imgs = Variable(imgs.to(device))

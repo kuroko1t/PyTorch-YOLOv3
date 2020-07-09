@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 
 #from utils.augmentations import horisontal_flip
+import torchvision
 from .augmentations import horisontal_flip
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
@@ -57,13 +58,62 @@ class ImageFolder(Dataset):
         return len(self.files)
 
 
+class CocoDetection(torchvision.datasets.CocoDetection):
+    def __init__(self, img_folder, ann_file, img_size=416, multiscale=True):
+        super(CocoDetection, self).__init__(img_folder, ann_file)
+        self._transforms = transforms
+        self.img_size = img_size
+        self.multiscale = multiscale
+        self.min_size = self.img_size - 3 * 32
+        self.max_size = self.img_size + 3 * 32
+        self.batch_count = 0
+
+    def __getitem__(self, idx):
+        img, target = super(CocoDetection, self).__getitem__(idx)
+
+        origin_w, origin_h = img.size
+        # convert img
+        img = transforms.ToTensor()(img.convert('RGB'))
+        
+        image_id = self.ids[idx]
+        targets = torch.zeros((len(target), 6))
+        for i,t in enumerate(target):
+            bbox = t["bbox"]
+            category_id = t["category_id"]
+            x, y , width, height = bbox
+            xcenter = x + width / 2
+            ycenter = y + height / 2
+            targets[i,1] = category_id  
+            targets[i,2] = xcenter / origin_w
+            targets[i,3] = ycenter / origin_h
+            targets[i,4] = width / origin_w 
+            targets[i,5] = height / origin_h
+        return img, targets
+
+    def collate_fn(self, batch):
+        imgs, targets = list(zip(*batch))
+        # Remove empty placeholder targets
+        targets = [boxes for boxes in targets if boxes is not None]
+        # Add sample index to targets
+        for i, boxes in enumerate(targets):
+            boxes[:, 0] = i
+        targets = torch.cat(targets, 0)
+        # Selects new image size every tenth batch
+        if self.multiscale and self.batch_count % 10 == 0:
+            self.img_size = random.choice(range(self.min_size, self.max_size + 1, 32))
+        # Resize images to input shape
+        imgs = torch.stack([resize(img, self.img_size) for img in imgs])
+        self.batch_count += 1
+        return imgs, targets
+
+
 class ListDataset(Dataset):
     def __init__(self, img_path, img_size=416, augment=True, multiscale=True, normalized_labels=True):
         #with open(list_path, "r") as file:
         #    self.img_files = file.readlines()
         self.img_files = glob.glob(img_path+"/*.jpg")
         self.img_files += glob.glob(img_path+"/*.png")
-        self.label_files = [img.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt") for img in self.img_files]
+        self.label_files = [img.replace("images", "annotations").replace(".png", ".txt").replace(".jpg", ".txt") for img in self.img_files]
 
         #self.label_files = [
         #    path.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
@@ -72,7 +122,7 @@ class ListDataset(Dataset):
         self.img_size = img_size
         self.max_objects = 100
         self.augment = augment
-        self.multiscale = multiscale
+        self.multiscale = multiscael
         self.normalized_labels = normalized_labels
         self.min_size = self.img_size - 3 * 32
         self.max_size = self.img_size + 3 * 32
